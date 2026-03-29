@@ -12,13 +12,24 @@
         rel="stylesheet">
 
     <style>
+        .content-card {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: 0.6s ease;
+        }
+
+        .content-card.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         :root {
-            --bg-dark: #0a1120;
-            --card-dark: #1e293b;
-            --accent-blue: #a5ad0c;
-            --text-gray: #94a3b8;
-            --white: #ffffff;
-            --transition-smooth: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            --bg-dark: #0b0b0b;
+            --card-dark: #1a1a1a;
+            --accent-blue: #facc15;
+            --text-gray: #a3a3a3;
+            --white: #fafafa;
+            --transition-smooth: all 0.4s ease;
         }
 
         * {
@@ -352,6 +363,7 @@
                     <li class="nav-item"><a class="nav-link px-3" href="#education">Pendidikan</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#skills">Keahlian</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#portfolio">Proyek</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#quotes">Kutipan</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#contact">Kontak</a></li>
                 </ul>
             </div>
@@ -389,7 +401,9 @@
                 <div id="about" class="content-card">
                     <div class="section-header">
                         <h2>Tentang Saya</h2>
-                        <a href="#" class="btn-cv">Unduh CV (PDF) <i class="fas fa-download ms-1"></i></a>
+                        <a href="CV_Afrizal.pdf" download class="btn-cv">
+                            Unduh CV (PDF) <i class="fas fa-download ms-1"></i>
+                        </a>
                     </div>
                     <div class="row align-items-center">
                         <div class="col-md-7">
@@ -522,7 +536,7 @@
                     </div>
                     <p class="text-gray small mb-4">Punya ide proyek atau sekadar ingin menyapa? Kirim pesan melalui
                         form di bawah ini!</p>
-                    <form action="#">
+                    <form onsubmit="sendMessage(event)">
                         <input type="text" class="form-control form-control-dark" placeholder="Nama Lengkap" required>
                         <input type="email" class="form-control form-control-dark" placeholder="Email Anda" required>
                         <textarea class="form-control form-control-dark" rows="4" placeholder="Tuliskan pesan Anda..."
@@ -541,63 +555,133 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Fungsi untuk mengambil kutipan
-        function getQuote() {
-            const quoteText = $('#quote-text');
-            const quoteAuthor = $('#quote-author');
+        // ==========================
+        // GLOBAL VARIABLE
+        // ==========================
+        let currentQuoteEN = "";
+        let currentQuoteID = "";
+        let currentAuthor = "";
 
-            quoteText.fadeOut(200, function () {
-                $(this).text('Sedang mengambil kutipan inspiratif...').fadeIn(200);
-            });
-            quoteAuthor.fadeOut(200);
-
-            // Menggunakan API quotable.io (lebih stabil) atau fallback ke dummy data
+        // ==========================
+        // FETCH QUOTE (AJAX)
+        // ==========================
+        function fetchQuote() {
+            $('#quote-text').text("Mengambil kutipan...");
+            // Menggunakan API ZenQuotes (lebih stabil)
+            // atau Quotable jika sudah kembali aktif
             $.ajax({
-                url: "https://api.allorigins.win/get?url=" + encodeURIComponent("https://zenquotes.io/api/random"),
-                method: "GET",
-                timeout: 5000, // Timeout 5 detik
+                url: "https://api.allorigins.win/get?url=" + encodeURIComponent("https://zenquotes.io/api/random"), method: "GET",
                 success: function (data) {
-                    try {
-                        const res = JSON.parse(data.contents);
-                        const text = res[0].q;
-                        const author = res[0].a;
-
-                        quoteText.fadeOut(200, function () {
-                            $(this).text(`"${text}"`).fadeIn(200);
-                        });
-                        quoteAuthor.fadeOut(200, function () {
-                            $(this).text(`- ${author}`).fadeIn(200);
-                        });
-                    } catch (e) {
-                        showFallbackQuote();
-                    }
+                    const res = JSON.parse(data.contents);
+                    $('#quote-text').text(`"${res[0].q}"`);
+                    $('#quote-author').text(`- ${res[0].a}`);
                 },
                 error: function () {
-                    showFallbackQuote();
+                    $('#quote-text').text("Tetaplah belajar, karena hidup tak pernah berhenti mengajar.");
+                    $('#quote-author').text("- Anonim");
                 }
             });
         }
 
-        // Kutipan cadangan jika API gagal/lambat
-        function showFallbackQuote() {
-            const fallbacks = [
-                { q: "Logic will get you from A to B. Imagination will take you everywhere.", a: "Albert Einstein" },
-                { q: "The only way to do great work is to love what you do.", a: "Steve Jobs" },
-                { q: "Innovation distinguishes between a leader and a follower.", a: "Steve Jobs" },
-                { q: "Stay hungry, stay foolish.", a: "Whole Earth Catalog" }
-            ];
-            const random = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-
+        // ==========================
+        // TAMPILKAN QUOTE
+        // ==========================
+        function showQuote(text) {
             $('#quote-text').fadeOut(200, function () {
-                $(this).text(`"${random.q}"`).fadeIn(200);
+                $(this).text(`"${text}"`).fadeIn(300);
             });
+
             $('#quote-author').fadeOut(200, function () {
-                $(this).text(`- ${random.a} (Offline Mode)`).fadeIn(200);
+                $(this).text(`- ${currentAuthor}`).fadeIn(300);
             });
         }
 
+        // ==========================
+        // TRANSLATE SEDERHANA
+        // ==========================
+        function translateToID(text) {
+            return text
+                .replace(/success/gi, "kesuksesan")
+                .replace(/life/gi, "hidup")
+                .replace(/work/gi, "kerja")
+                .replace(/dream/gi, "mimpi");
+        }
+
+        // ==========================
+        // FALLBACK QUOTE
+        // ==========================
+        function showFallbackQuote() {
+            const fallback = {
+                q: "Jangan takut gagal, takutlah untuk tidak mencoba.",
+                a: "Anonim"
+            };
+
+            $('#quote-text').fadeOut(200, function () {
+                $(this).text(`"${fallback.q}"`).fadeIn(300);
+            });
+
+            $('#quote-author').fadeOut(200, function () {
+                $(this).text(`- ${fallback.a}`).fadeIn(300);
+            });
+        }
+
+        // ==========================
+        // FORM SIMULASI
+        // ==========================
+        function sendMessage(e) {
+            e.preventDefault();
+            alert("Pesan berhasil dikirim! (Simulasi)");
+        }
+
+        // ==========================
+        // GITHUB API
+        // ==========================
+        function getGithubData() {
+            $.ajax({
+                url: "https://api.github.com/users/AfrizalDwiNugraha136",
+                method: "GET",
+                success: function (data) {
+                    $("#repo-count").html(
+                        `<i class="fas fa-code-branch"></i> Public Repo: ${data.public_repos}`
+                    );
+                },
+                error: function () {
+                    $("#repo-count").text("Gagal memuat data GitHub");
+                }
+            });
+        }
+
+        // ==========================
+        // ANIMASI SCROLL
+        // ==========================
+        function revealOnScroll() {
+            $(".content-card").each(function () {
+                if ($(this).offset().top < $(window).scrollTop() + 500) {
+                    $(this).addClass("show");
+                }
+            });
+        }
+
+        // ==========================
+        // MAILTO (PASTIKAN ID ADA)
+        // ==========================
         $(document).ready(function () {
-            getQuote();
+            $('#contactForm').on('submit', function (e) {
+                e.preventDefault();
+                const name = $('#input_name').val();
+                const email = $('#input_email').val();
+                const msg = $('#input_msg').val();
+
+                const subject = encodeURIComponent("Portfolio Contact - " + name);
+                const body = encodeURIComponent(`Halo Afrizal,\n\nNama: ${name}\nEmail: ${email}\n\nPesan:\n${msg}`);
+
+                window.location.href = `mailto:2311102136@ittelkom-pwt.ac.id?subject=${subject}&body=${body}`;
+            });
+
+            fetchQuote();
+            getGithubData();
+            revealOnScroll();
+            $(window).on("scroll", revealOnScroll);
         });
     </script>
 
